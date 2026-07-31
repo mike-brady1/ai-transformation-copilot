@@ -1,6 +1,5 @@
 import io
 
-import chromadb
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -9,6 +8,7 @@ from sqlalchemy.orm import Session
 from backend.api.main import app
 from backend.database import Base, get_db
 from backend.rag.vector_store import get_chroma_client
+from tests.conftest import fresh_chroma_client, reset_shared_chroma_store
 
 
 @pytest.fixture()
@@ -25,13 +25,9 @@ def client(tmp_path):
         finally:
             db.close()
 
-    def override_get_chroma_client():
-        # In-memory only, isolated per test — same idea as the throwaway
-        # SQLite file above, just for the vector store instead of the DB.
-        return chromadb.EphemeralClient()
-
+    reset_shared_chroma_store()
     app.dependency_overrides[get_db] = override_get_db
-    app.dependency_overrides[get_chroma_client] = override_get_chroma_client
+    app.dependency_overrides[get_chroma_client] = fresh_chroma_client
     yield TestClient(app)
     app.dependency_overrides.clear()
 

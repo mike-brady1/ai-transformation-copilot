@@ -25,21 +25,14 @@ class _FakeResponse:
 
 class _FakeMessages:
     def create(self, **kwargs):
-        # Never calls the real Anthropic API: no cost, no network, no
-        # non-determinism in the test suite. Shaped exactly like what
-        # analyze_transcript() expects back from a real tool_use response.
         return _FakeResponse(
             [
                 _FakeToolUseBlock(
                     {
-                        "findings": [
-                            {
-                                "pain_point": "High machine downtime",
-                                "severity": "High",
-                                "business_impact": "Lost production time weekly",
-                                "recommendation": "Predictive Maintenance",
-                            }
-                        ]
+                        "strengths": [{"item": "Experienced workforce", "explanation": "..."}],
+                        "weaknesses": [{"item": "High machine downtime", "explanation": "..."}],
+                        "opportunities": [{"item": "Predictive maintenance", "explanation": "..."}],
+                        "threats": [{"item": "Production downtime costs", "explanation": "..."}],
                     }
                 )
             ]
@@ -87,29 +80,32 @@ def workspace_id(client):
     return resp.json()["id"]
 
 
-def test_analyze_document_returns_structured_findings(client, workspace_id):
-    file_content = b"Machine failures happen almost every week on line 3."
-    upload_resp = client.post(
-        f"/workspaces/{workspace_id}/documents",
-        files={"file": ("notes.txt", io.BytesIO(file_content), "text/plain")},
-    )
-    document_id = upload_resp.json()["id"]
+def test_swot_requires_documents_first(client, workspace_id):
+    resp = client.post(f"/workspaces/{workspace_id}/swot")
+    assert resp.status_code == 400
 
-    resp = client.post(f"/workspaces/{workspace_id}/documents/{document_id}/analyze")
+
+def test_swot_generates_all_four_quadrants(client, workspace_id):
+    client.post(
+        f"/workspaces/{workspace_id}/documents",
+        files={
+            "file": (
+                "notes.txt",
+                io.BytesIO(b"Machine failures happen almost every week."),
+                "text/plain",
+            )
+        },
+    )
+
+    resp = client.post(f"/workspaces/{workspace_id}/swot")
     assert resp.status_code == 200
-    findings = resp.json()
-    assert len(findings) == 1
-    assert findings[0]["pain_point"] == "High machine downtime"
-    assert findings[0]["severity"] == "High"
+    swot = resp.json()
+    assert swot["strengths"][0]["item"] == "Experienced workforce"
+    assert swot["weaknesses"][0]["item"] == "High machine downtime"
+    assert swot["opportunities"][0]["item"] == "Predictive maintenance"
+    assert swot["threats"][0]["item"] == "Production downtime costs"
 
 
-def test_analyze_rejects_document_from_other_workspace(client, workspace_id):
-    file_content = b"Some notes."
-    upload_resp = client.post(
-        f"/workspaces/{workspace_id}/documents",
-        files={"file": ("notes.txt", io.BytesIO(file_content), "text/plain")},
-    )
-    document_id = upload_resp.json()["id"]
-
-    resp = client.post(f"/workspaces/999/documents/{document_id}/analyze")
+def test_swot_rejects_unknown_workspace(client):
+    resp = client.post("/workspaces/999/swot")
     assert resp.status_code == 404

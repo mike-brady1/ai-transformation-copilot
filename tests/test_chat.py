@@ -1,6 +1,5 @@
 import io
 
-import chromadb
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -10,6 +9,7 @@ from backend.ai.client import get_anthropic_client
 from backend.api.main import app
 from backend.database import Base, get_db
 from backend.rag.vector_store import get_chroma_client
+from tests.conftest import fresh_chroma_client, reset_shared_chroma_store
 
 
 class _FakeTextBlock:
@@ -46,8 +46,9 @@ def client(tmp_path):
         finally:
             db.close()
 
+    reset_shared_chroma_store()
     app.dependency_overrides[get_db] = override_get_db
-    app.dependency_overrides[get_chroma_client] = lambda: chromadb.EphemeralClient()
+    app.dependency_overrides[get_chroma_client] = fresh_chroma_client
     app.dependency_overrides[get_anthropic_client] = lambda: _FakeAnthropicClient()
     yield TestClient(app)
     app.dependency_overrides.clear()
