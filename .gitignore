@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Environment variables / secrets
+.env
+
+# Jupyter / Colab
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local databases (SQLite dev/test)
+*.db
+
+# Vector store persistence (regenerated from source docs, don't version it)
+datasets/chroma/
