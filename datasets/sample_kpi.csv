@@ -1,0 +1,4 @@
+machine,planned_production_time_hours,downtime_hours,units_produced,good_units,ideal_cycle_time_seconds,failure_count,energy_kwh
+Line 1,720,45,50000,48500,40,12,18000
+Line 2,720,20,62000,61200,38,4,21000
+Line 3,720,90,41000,38000,45,18,16500
