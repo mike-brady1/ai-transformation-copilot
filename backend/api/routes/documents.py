@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
+from backend.ai.client import get_anthropic_client
+from backend.ai.interview_analysis import analyze_transcript
 from backend.database import get_db
 from backend.models.document import Document
 from backend.models.workspace import Workspace
@@ -8,6 +10,7 @@ from backend.rag.chunking import chunk_text
 from backend.rag.loaders import load_text
 from backend.rag.vector_store import get_chroma_client, get_collection
 from backend.schemas.document import DocumentOut
+from backend.schemas.interview import PainPoint
 
 router = APIRouter(prefix="/workspaces/{workspace_id}/documents", tags=["documents"])
 
@@ -39,7 +42,10 @@ async def upload_document(
     collection.add(
         documents=chunks,
         ids=[f"doc{db_document.id}_chunk{i}" for i in range(len(chunks))],
-        metadatas=[{"source": file.filename, "document_id": db_document.id} for _ in chunks],
+        metadatas=[
+            {"source": file.filename, "document_id": db_document.id, "chunk_index": i}
+            for i in range(len(chunks))
+        ],
     )
 
     return db_document
@@ -48,6 +54,34 @@ async def upload_document(
 @router.get("", response_model=list[DocumentOut])
 def list_documents(workspace_id: int, db: Session = Depends(get_db)):
     return db.query(Document).filter(Document.workspace_id == workspace_id).all()
+
+
+@router.post("/{document_id}/analyze", response_model=list[PainPoint])
+def analyze_document(
+    workspace_id: int,
+    document_id: int,
+    db: Session = Depends(get_db),
+    chroma_client=Depends(get_chroma_client),
+    anthropic_client=Depends(get_anthropic_client),
+):
+    document = db.get(Document, document_id)
+    if document is None or document.workspace_id != workspace_id:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    # .get() with a metadata filter — different from .query(): this is an
+    # exact lookup ("give me every chunk from this document"), not a
+    # similarity search. Order isn't guaranteed, so we sort by the
+    # chunk_index we stored at upload time to rebuild the original text.
+    collection = get_collection(chroma_client, workspace_id)
+    result = collection.get(where={"document_id": document_id})
+    ordered = sorted(
+        zip(result["metadatas"], result["documents"]),
+        key=lambda pair: pair[0]["chunk_index"],
+    )
+    full_text = "\n\n".join(text for _, text in ordered)
+
+    findings = analyze_transcript(anthropic_client, full_text)
+    return findings
 
 
 @router.get("/search")
