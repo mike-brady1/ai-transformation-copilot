@@ -1,7 +1,7 @@
 import requests
 import streamlit as st
 
-from services.api_client import analyze_document, list_documents
+from services.api_client import analyze_document, error_detail, list_documents
 
 st.title("Interview Analyzer")
 
@@ -23,11 +23,8 @@ if st.button("Analyze"):
     try:
         with st.spinner("Analyzing with Claude..."):
             findings = analyze_document(workspace_id, options[selected_label])
-    except requests.exceptions.RequestException:
-        st.error(
-            "Analysis failed. Check that the backend is running and "
-            "ANTHROPIC_API_KEY is set in its .env file."
-        )
+    except requests.exceptions.RequestException as exc:
+        st.error(f"Analysis failed: {error_detail(exc)}")
         st.stop()
     # Persisted so other pages (e.g. the PowerPoint export's Pain Points
     # slide) can reuse it, and so it survives navigating away and back —

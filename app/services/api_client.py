@@ -3,6 +3,22 @@ import requests
 from config import API_BASE_URL
 
 
+def error_detail(exc: requests.exceptions.RequestException) -> str:
+    """Pulls FastAPI's {"detail": "..."} message out of a failed
+    response when there is one, instead of showing a generic message
+    that can't distinguish 'backend unreachable' from 'backend responded
+    but rejected the request for a specific, useful reason'."""
+    response = getattr(exc, "response", None)
+    if response is not None:
+        try:
+            detail = response.json().get("detail")
+            if detail:
+                return detail
+        except ValueError:
+            pass
+    return str(exc)
+
+
 def create_workspace(payload: dict) -> dict:
     resp = requests.post(f"{API_BASE_URL}/workspaces", json=payload)
     resp.raise_for_status()

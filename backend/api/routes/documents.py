@@ -74,6 +74,17 @@ def analyze_document(
     # chunk_index we stored at upload time to rebuild the original text.
     collection = get_collection(chroma_client, workspace_id)
     result = collection.get(where={"document_id": document_id})
+    if not result["documents"]:
+        # The Document row (Postgres) can outlive its chunks (Chroma) —
+        # e.g. a hosting environment with an ephemeral disk that resets
+        # on redeploy while the database persists. Fail clearly instead
+        # of sending an empty message to Claude, which raised an
+        # unhandled exception (500) rather than a useful error.
+        raise HTTPException(
+            status_code=404,
+            detail="No content found for this document — it may need to be re-uploaded.",
+        )
+
     ordered = sorted(
         zip(result["metadatas"], result["documents"]),
         key=lambda pair: pair[0]["chunk_index"],
