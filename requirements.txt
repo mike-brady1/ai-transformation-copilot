@@ -13,3 +13,5 @@ python-dotenv
 streamlit
 requests
 pandas
+python-docx
+fpdf2

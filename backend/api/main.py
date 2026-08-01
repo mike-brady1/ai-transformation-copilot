@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from backend.api.routes.chat import router as chat_router
 from backend.api.routes.digital_maturity import router as digital_maturity_router
 from backend.api.routes.documents import router as documents_router
+from backend.api.routes.executive_report import router as executive_report_router
 from backend.api.routes.kpi import router as kpi_router
 from backend.api.routes.roadmap import router as roadmap_router
 from backend.api.routes.sustainability import router as sustainability_router
@@ -23,6 +24,7 @@ app.include_router(roadmap_router)
 app.include_router(digital_maturity_router)
 app.include_router(technology_router)
 app.include_router(sustainability_router)
+app.include_router(executive_report_router)
 
 
 @app.get("/health")
