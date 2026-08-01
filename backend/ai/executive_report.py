@@ -1,3 +1,5 @@
+from backend.ai.digital_maturity import MATURITY_CATEGORIES
+
 EXECUTIVE_SUMMARY_TOOL = {
     "name": "record_executive_summary",
     "description": "Write the narrative sections of a consulting executive report from already-completed findings.",
@@ -72,19 +74,6 @@ def generate_executive_narrative(client, findings_text: str) -> dict:
             return block.input
 
     return EMPTY_NARRATIVE
-
-
-MATURITY_CATEGORIES = [
-    "leadership",
-    "operations",
-    "technology",
-    "data",
-    "supply_chain",
-    "automation",
-    "sustainability",
-    "cybersecurity",
-    "workforce",
-]
 
 
 def format_findings_as_text(

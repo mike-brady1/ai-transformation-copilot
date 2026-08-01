@@ -1,12 +1,12 @@
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class WorkspaceCreate(BaseModel):
-    client_name: str
-    industry: str
-    employees: int
+    client_name: str = Field(min_length=1)
+    industry: str = Field(min_length=1)
+    employees: int = Field(gt=0)
     countries: list[str]
     current_erp: Optional[str] = None
     current_mes: Optional[str] = None

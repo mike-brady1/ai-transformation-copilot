@@ -47,3 +47,29 @@ def test_create_and_list_workspace(client):
     assert resp.status_code == 200
     assert len(resp.json()) == 1
     assert resp.json()[0]["client_name"] == "Acme Manufacturing"
+
+
+def test_create_workspace_rejects_non_positive_employees(client):
+    resp = client.post(
+        "/workspaces",
+        json={
+            "client_name": "Acme Manufacturing",
+            "industry": "Automotive",
+            "employees": 0,
+            "countries": ["France"],
+        },
+    )
+    assert resp.status_code == 422
+
+
+def test_create_workspace_rejects_empty_client_name(client):
+    resp = client.post(
+        "/workspaces",
+        json={
+            "client_name": "",
+            "industry": "Automotive",
+            "employees": 100,
+            "countries": ["France"],
+        },
+    )
+    assert resp.status_code == 422
