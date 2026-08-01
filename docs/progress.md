@@ -155,6 +155,16 @@ A running record of what's been built, in what order, and *why* — the reasonin
 - **Closed a real validation gap**: `WorkspaceCreate` accepted `employees=0` or negative, and empty strings for `client_name`/`industry`, with nothing catching it before it hit the database. Added `Field(gt=0)` / `Field(min_length=1)` constraints plus two new tests. Deliberately didn't add validation beyond this system boundary (e.g. inside KPI CSV parsing) — that's exactly the kind of over-validation-beyond-what's-needed this project has avoided elsewhere.
 - Full test suite (34 tests) reinstalled from the freshly pinned `requirements.txt` and re-run clean before committing.
 
+## 2026-08-01 — Deploy prep (code changes only, not yet deployed)
+
+Target: Streamlit Community Cloud (frontend) + Render (backend) + Neon (Postgres), all free-tier, all deploying from this GitHub repo. Proposed the plan before touching code, including a real limitation worth stating plainly rather than hiding: Render's free tier has no persistent disk, so ChromaDB's `./chroma_db` (uploaded document embeddings) resets on cold start/redeploy — workspaces and analyses in Postgres survive, uploaded documents don't. Acceptable for a portfolio demo; a hosted vector DB or paid disk would fix it but isn't worth the added cost/complexity here.
+
+- `backend/database.py`: `DATABASE_URL` now reads from an env var (`os.environ.get("DATABASE_URL", "sqlite:///...")`) instead of being hardcoded — falls back to SQLite locally, points at Neon in production with zero other code changes, which is the entire point of having used the SQLAlchemy ORM throughout instead of raw SQL. Also fixed a latent bug this surfaced: `connect_args={"check_same_thread": False}` is SQLite-specific and Postgres's driver doesn't accept it — now only applied when the URL is SQLite.
+- Added `psycopg2-binary` and verified (before assuming) that a plain `postgresql://` URL — exactly what Neon hands you, no editing needed — resolves to it automatically via SQLAlchemy's dialect detection.
+- `app/config.py`: added an `st.secrets` fallback for `API_BASE_URL`, needed for Streamlit Community Cloud. Found a real gotcha while testing it: `st.secrets.get(key, default)` still raises `StreamlitSecretNotFoundError` when no `secrets.toml` exists anywhere — `.get()`'s default doesn't protect against it because the underlying error isn't a `KeyError`, so `MutableMapping.get()`'s try/except doesn't catch it. Confirmed the exact failure locally before writing the fix, which wraps the whole lookup in a broad `except`.
+- Verified all three changes together: full test suite still green (34 passed), and a real local server boot correctly falls back to SQLite and reads pre-existing data.
+- Not yet done: actually creating the Neon/Render/Streamlit Cloud accounts and deploying (requires the user's own accounts on each service).
+
 ## 2026-07-31 — Module 4: KPI Dashboard
 
 - Deliberately **no Claude call** in this module — OEE/MTBF/MTTR are well-defined formulas, not a reasoning task. An LLM would be slower, cost money, and add non-determinism for zero benefit. Worth being able to articulate this "when NOT to use AI" judgment call, not just "when to use it."
