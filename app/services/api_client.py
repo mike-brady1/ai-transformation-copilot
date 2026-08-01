@@ -71,6 +71,15 @@ def generate_technology_recommendations(workspace_id: int) -> dict:
     return resp.json()
 
 
+def generate_sustainability_report(workspace_id: int, filename: str, file_bytes: bytes) -> dict:
+    resp = requests.post(
+        f"{API_BASE_URL}/workspaces/{workspace_id}/sustainability",
+        files={"file": (filename, file_bytes)},
+    )
+    resp.raise_for_status()
+    return resp.json()
+
+
 def send_chat_message(workspace_id: int, messages: list[dict]) -> dict:
     resp = requests.post(
         f"{API_BASE_URL}/workspaces/{workspace_id}/chat", json={"messages": messages}

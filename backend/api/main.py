@@ -5,6 +5,7 @@ from backend.api.routes.digital_maturity import router as digital_maturity_route
 from backend.api.routes.documents import router as documents_router
 from backend.api.routes.kpi import router as kpi_router
 from backend.api.routes.roadmap import router as roadmap_router
+from backend.api.routes.sustainability import router as sustainability_router
 from backend.api.routes.swot import router as swot_router
 from backend.api.routes.technology import router as technology_router
 from backend.api.routes.workspaces import router as workspaces_router
@@ -21,6 +22,7 @@ app.include_router(swot_router)
 app.include_router(roadmap_router)
 app.include_router(digital_maturity_router)
 app.include_router(technology_router)
+app.include_router(sustainability_router)
 
 
 @app.get("/health")
