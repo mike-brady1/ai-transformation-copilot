@@ -165,6 +165,13 @@ Target: Streamlit Community Cloud (frontend) + Render (backend) + Neon (Postgres
 - Verified all three changes together: full test suite still green (34 passed), and a real local server boot correctly falls back to SQLite and reads pre-existing data.
 - Not yet done: actually creating the Neon/Render/Streamlit Cloud accounts and deploying (requires the user's own accounts on each service).
 
+## 2026-08-02 — Live deployment + a real bug it surfaced
+
+- Deployed for real: Neon (Postgres), Render (backend), Streamlit Community Cloud (frontend), in that order since each needs a value from the previous one. Verified each independently before moving on — `GET /workspaces` returning a clean `[]` (not an error) after Render deployed was the proof the Postgres connection, not just the server boot, actually worked.
+- **Real bug, found immediately by the user clicking the live app**: creating a workspace with blank fields crashed with an unhandled `requests.exceptions.HTTPError`. Root cause, confirmed by local reproduction before fixing (not assumed): `app/main.py` — the very first page built, back before Module 3 established the "wrap backend calls in try/except" pattern used everywhere since — never caught exceptions from either `list_workspaces()` (runs unconditionally on every page load) or `create_workspace()`. The immediate trigger was this session's own polish-pass change: `WorkspaceCreate` gained `Field(min_length=1)` validation on `client_name`/`industry`, and the form had no client-side check, so submitting it blank now correctly gets rejected by the backend (422) — but nothing caught that rejection.
+- Fix: client-side validation before the request even fires (clear message, no round-trip needed for the common case), plus `try/except requests.exceptions.RequestException` around both calls as the actual safety net — same pattern Chat/Interview Analyzer/SWOT/etc. already had, extended to the one page that predated it. Also added a specific message for Render's free-tier cold-start case (30-60s wake time) on the `list_workspaces()` path, since that's a real thing a user will hit on this exact deployment.
+- Verified the fix by reproducing the exact failure locally first (empty submit → clean `st.error`, not a crash), then confirming the happy path still works (successful creation) — both against a real local server, not assumed from reading the diff.
+
 ## 2026-07-31 — Module 4: KPI Dashboard
 
 - Deliberately **no Claude call** in this module — OEE/MTBF/MTTR are well-defined formulas, not a reasoning task. An LLM would be slower, cost money, and add non-determinism for zero benefit. Worth being able to articulate this "when NOT to use AI" judgment call, not just "when to use it."

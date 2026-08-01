@@ -1,3 +1,4 @@
+import requests
 import streamlit as st
 
 from services.api_client import create_workspace, list_workspaces
@@ -6,7 +7,14 @@ st.set_page_config(page_title="AI Transformation Copilot", page_icon="\U0001F4CA
 st.title("AI Transformation Copilot")
 st.caption("Select or create a client engagement to get started.")
 
-workspaces = list_workspaces()
+try:
+    workspaces = list_workspaces()
+except requests.exceptions.RequestException as exc:
+    st.error(
+        "Couldn't reach the backend. If it's been idle, a free-tier Render "
+        f"service can take 30-60s to wake up — try refreshing shortly. ({exc})"
+    )
+    st.stop()
 
 if workspaces:
     st.subheader("Existing engagements")
@@ -27,6 +35,10 @@ with st.form("new_workspace"):
     submitted = st.form_submit_button("Create workspace")
 
     if submitted:
+        if not client_name.strip() or not industry.strip():
+            st.error("Client name and Industry are required.")
+            st.stop()
+
         payload = {
             "client_name": client_name,
             "industry": industry,
@@ -34,7 +46,11 @@ with st.form("new_workspace"):
             "countries": [c.strip() for c in countries.split(",") if c.strip()],
             "current_erp": current_erp or None,
         }
-        new_ws = create_workspace(payload)
+        try:
+            new_ws = create_workspace(payload)
+        except requests.exceptions.RequestException as exc:
+            st.error(f"Could not create the workspace. ({exc})")
+            st.stop()
         st.session_state["workspace_id"] = new_ws["id"]
         st.success(f"Created workspace for {new_ws['client_name']} (id={new_ws['id']})")
         st.rerun()
