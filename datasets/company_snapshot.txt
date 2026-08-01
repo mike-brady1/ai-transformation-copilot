@@ -1,0 +1,32 @@
+Acme Manufacturing — Company Snapshot
+
+Industry: Automotive components (stamping, CNC machining, assembly, and
+painted subassemblies for tier-1 automotive suppliers)
+
+Sites: Lyon, France (primary plant, ~950 employees) and Stuttgart, Germany
+(secondary plant, ~550 employees)
+
+Founded: 1987. Family-owned until a private equity minority investment in
+2019, which came with an expectation of a formal digital transformation plan
+within three years — a deadline that has now passed without one being
+delivered.
+
+Product lines: stamped chassis brackets, CNC-machined transmission
+components, welded subframes, and painted trim assemblies. Roughly 60% of
+revenue comes from three long-term contracts with major automotive OEMs, all
+of which include on-time-delivery penalty clauses.
+
+Recent context: A major customer audit last year flagged the plant's lack of
+real-time production visibility as a risk to the relationship, though no
+formal corrective action plan has been filed yet. Two customers have also
+begun asking for Scope 1/2 emissions data as part of their own supplier
+sustainability reporting requirements — a request Acme currently cannot
+fully answer.
+
+Workforce: Average tenure on the production floor exceeds ten years. Roughly
+15% of production staff are within three years of retirement eligibility,
+concentrated among the most senior machine operators.
+
+Current systems: A 12-year-old ERP system (no MES layer), spreadsheet-based
+maintenance tracking, and no centralized data warehouse. Digital initiatives
+to date have been plant-level pilots rather than company-wide programs.

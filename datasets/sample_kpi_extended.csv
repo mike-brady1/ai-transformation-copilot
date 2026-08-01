@@ -1,0 +1,9 @@
+machine,planned_production_time_hours,downtime_hours,units_produced,good_units,ideal_cycle_time_seconds,failure_count,energy_kwh
+CNC Line 1,720,38,48000,46800,45,9,15200
+CNC Line 2,720,52,44500,42100,45,14,15800
+Stamping Press A,700,25,95000,93100,20,6,22000
+Stamping Press B,700,110,71000,64500,20,22,24500
+Assembly Line 1,720,15,36000,35600,60,3,9800
+Assembly Line 2,720,60,31000,28900,60,11,10500
+Paint Booth,680,40,28000,27300,70,7,31000
+Welding Robot Cell,720,18,52000,51400,48,4,17600

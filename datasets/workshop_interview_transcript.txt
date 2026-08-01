@@ -1,0 +1,69 @@
+Digital Transformation Workshop — Acme Manufacturing
+Site: Lyon, France (primary plant) and Stuttgart, Germany (secondary plant)
+Attendees: Plant Director, Production Manager, Maintenance Manager, Supply Chain Manager, Quality Manager, IT Manager, EHS & Sustainability Manager, HR Business Partner
+
+Plant Director:
+We've said for two years running that digital transformation is a top priority,
+and it's in our strategic plan slide deck every year. Honestly, though, most of
+that commitment hasn't translated into funded projects or a named owner. We
+approve pilots, they run for a quarter, and then they quietly stop when the
+person running them gets pulled onto something else. We don't have a
+transformation roadmap anyone is actually accountable for.
+
+Production Manager:
+Machine failures happen almost every week. We lose at least half a shift every
+time a line goes down, and half the time we don't know it's about to fail
+until it already has. It's become normal to just expect a bad week every
+month or so.
+
+Maintenance Manager:
+Preventive maintenance is mostly manual. We follow a fixed monthly schedule
+regardless of actual machine condition, which means we either over-maintain
+healthy machines or under-maintain ones that are about to fail. Spare parts
+inventory is also mostly guesswork — we've had machines down for three extra
+days waiting on a part we should have had in stock.
+
+Supply Chain Manager:
+We don't have visibility after products leave the factory. Once a shipment
+leaves the dock, we're relying on the carrier to tell us where it is, and half
+the time that information is stale or wrong. On the inbound side it's not much
+better — supplier lead times have gotten a lot less predictable in the last
+two years and we usually only find out about a delay when the truck doesn't
+show up.
+
+Quality Manager:
+Our scrap rate has crept up over the last year and I can't fully explain why
+from the data we have, because most of our quality inspection is still manual
+checks on paper forms that get entered into a spreadsheet at the end of the
+shift. We have no statistical process control software, so we can't catch a
+drifting process until it's already produced a batch of defects.
+
+IT Manager:
+On the cybersecurity side, we're behind where we should be. A lot of our
+production floor systems are running on older operating systems that no
+longer get security patches, and we don't have a formal incident response
+plan — if something happened tonight, we'd be improvising. That said, we did
+roll out multi-factor authentication for all office staff last quarter, and
+we just upgraded the perimeter firewall, so it's not that nothing is
+happening, it's that it's happening slower and more reactively than it
+should.
+
+EHS & Sustainability Manager:
+We've made some real progress — we finished an LED lighting retrofit across
+both plants last year, and we introduced a waste segregation program that's
+cut landfill waste by around a third. What we don't have is any systematic
+energy monitoring. We know our total utility bill but not which processes or
+machines are actually driving it, so we can't target the next round of
+efficiency investments with any confidence. We also don't track Scope 1/2
+emissions in any formal way — if a customer or regulator asked for numbers
+tomorrow, we'd be estimating.
+
+HR Business Partner:
+Our biggest strength is honestly our people. Most of our senior operators
+have been here more than ten years and know these machines better than any
+manual could tell you. The flip side is that a lot of that knowledge has
+never been written down anywhere, and we don't have a formal training program
+for newer digital tools — when we roll out anything new, it spreads by
+word-of-mouth on the floor rather than structured training. We also have a
+few operators approaching retirement in the next two to three years, which
+worries me given how much knowledge would leave with them.
