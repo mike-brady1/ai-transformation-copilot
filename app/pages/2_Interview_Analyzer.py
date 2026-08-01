@@ -29,7 +29,14 @@ if st.button("Analyze"):
             "ANTHROPIC_API_KEY is set in its .env file."
         )
         st.stop()
+    # Persisted so other pages (e.g. the PowerPoint export's Pain Points
+    # slide) can reuse it, and so it survives navigating away and back —
+    # same pattern as swot_result/roadmap_result/etc, missed here since
+    # this page predates that convention.
+    st.session_state["interview_findings"] = findings
 
+if "interview_findings" in st.session_state:
+    findings = st.session_state["interview_findings"]
     if not findings:
         st.info("No pain points found.")
 
