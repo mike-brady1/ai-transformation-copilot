@@ -1,10 +1,13 @@
+import base64
 import io
 
 import requests
 import streamlit as st
 from docx import Document
+from docx.shared import Inches
 from fpdf import FPDF
 
+from charts import kpi_oee_chart_png, maturity_chart_png
 from services.api_client import generate_executive_report_narrative
 
 st.title("Executive Report")
@@ -85,6 +88,14 @@ def build_report_sections() -> list[tuple[str, str | list[str]]]:
         ("Key Findings", narrative["key_findings"]),
     ]
 
+    if kpi:
+        kpi_lines = [
+            f"{row.get('machine')}: OEE {row.get('oee'):.1%}, "
+            f"MTBF {row.get('mtbf_hours'):.1f}h, MTTR {row.get('mttr_hours'):.1f}h"
+            for row in kpi
+        ]
+        sections.append(("Operational Analysis", kpi_lines))
+
     if swot:
         swot_lines = []
         for category in ["strengths", "weaknesses", "opportunities", "threats"]:
@@ -130,8 +141,19 @@ def build_report_sections() -> list[tuple[str, str | list[str]]]:
 
 sections = build_report_sections()
 
+# Charts, keyed by the section heading they belong under — generated once,
+# reused across the on-page display and all three export formats, so the
+# report isn't just bullet lists of numbers with no visual.
+charts: dict[str, bytes] = {}
+if maturity:
+    charts["Digital Maturity"] = maturity_chart_png(maturity)
+if kpi:
+    charts["Operational Analysis"] = kpi_oee_chart_png(kpi)
+
 for heading, content in sections:
     st.subheader(heading)
+    if heading in charts:
+        st.image(charts[heading])
     if isinstance(content, list):
         for line in content:
             st.write(line if line.startswith("  ") else f"- {line}")
@@ -139,10 +161,13 @@ for heading, content in sections:
         st.write(content)
 
 
-def build_markdown(sections) -> str:
+def build_markdown(sections, charts) -> str:
     parts = ["# Executive Report\n"]
     for heading, content in sections:
         parts.append(f"## {heading}\n")
+        if heading in charts:
+            b64 = base64.b64encode(charts[heading]).decode("ascii")
+            parts.append(f"![{heading} chart](data:image/png;base64,{b64})\n")
         if isinstance(content, list):
             for line in content:
                 parts.append(f"- {line}")
@@ -152,11 +177,13 @@ def build_markdown(sections) -> str:
     return "\n".join(parts)
 
 
-def build_docx(sections) -> bytes:
+def build_docx(sections, charts) -> bytes:
     doc = Document()
     doc.add_heading("Executive Report", level=0)
     for heading, content in sections:
         doc.add_heading(heading, level=1)
+        if heading in charts:
+            doc.add_picture(io.BytesIO(charts[heading]), width=Inches(6))
         if isinstance(content, list):
             for line in content:
                 doc.add_paragraph(line, style="List Bullet")
@@ -191,7 +218,7 @@ def _sanitize_for_pdf(text: str) -> str:
     return text.encode("latin-1", errors="replace").decode("latin-1")
 
 
-def build_pdf(sections) -> bytes:
+def build_pdf(sections, charts) -> bytes:
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Helvetica", "B", 16)
@@ -207,6 +234,10 @@ def build_pdf(sections) -> bytes:
         pdf.set_x(pdf.l_margin)
         pdf.set_font("Helvetica", "B", 13)
         pdf.multi_cell(0, 8, _sanitize_for_pdf(heading))
+        if heading in charts:
+            pdf.set_x(pdf.l_margin)
+            pdf.image(io.BytesIO(charts[heading]), x=pdf.l_margin, w=180)
+            pdf.ln(2)
         pdf.set_font("Helvetica", "", 11)
         if isinstance(content, list):
             for line in content:
@@ -225,21 +256,21 @@ col1, col2, col3 = st.columns(3)
 with col1:
     st.download_button(
         "Download Markdown",
-        build_markdown(sections),
+        build_markdown(sections, charts),
         file_name="executive_report.md",
         mime="text/markdown",
     )
 with col2:
     st.download_button(
         "Download Word",
-        build_docx(sections),
+        build_docx(sections, charts),
         file_name="executive_report.docx",
         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     )
 with col3:
     st.download_button(
         "Download PDF",
-        build_pdf(sections),
+        build_pdf(sections, charts),
         file_name="executive_report.pdf",
         mime="application/pdf",
     )

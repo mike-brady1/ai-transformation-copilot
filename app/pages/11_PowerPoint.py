@@ -3,6 +3,10 @@ import io
 import requests
 import streamlit as st
 from pptx import Presentation
+from pptx.chart.data import CategoryChartData
+from pptx.enum.chart import XL_CHART_TYPE
+from pptx.enum.text import MSO_AUTO_SIZE
+from pptx.util import Inches
 
 from services.api_client import generate_executive_report_narrative, list_workspaces
 
@@ -82,20 +86,22 @@ MATURITY_CATEGORIES = [
 ]
 
 
-def _format_number(value, fmt: str) -> str:
-    return format(value, fmt) if isinstance(value, (int, float)) else "N/A"
-
-
 def build_pptx() -> bytes:
     prs = Presentation()
     title_layout = prs.slide_layouts[0]
     content_layout = prs.slide_layouts[1]
+    chart_layout = prs.slide_layouts[5]  # Title Only — leaves room for a chart
 
     def add_bullet_slide(title: str, lines: list[str] | None):
         slide = prs.slides.add_slide(content_layout)
         slide.shapes.title.text = title
         lines = lines or ["Not available for this engagement."]
         body = slide.placeholders[1].text_frame
+        # Without these, a slide with many/long bullets just overflows the
+        # placeholder silently instead of shrinking to fit — confirmed
+        # this combination (word_wrap + TEXT_TO_FIT_SHAPE) works together.
+        body.word_wrap = True
+        body.auto_size = MSO_AUTO_SIZE.TEXT_TO_FIT_SHAPE
         body.text = lines[0]
         for line in lines[1:]:
             paragraph = body.add_paragraph()
@@ -103,6 +109,23 @@ def build_pptx() -> bytes:
 
     def add_text_slide(title: str, text: str | None):
         add_bullet_slide(title, [text] if text else None)
+
+    def add_chart_slide(title: str, categories: list[str], values: list[float]):
+        # A real, native PowerPoint chart object (editable in PowerPoint
+        # itself) rather than a static image — reads far better than a
+        # slide of "Category: score" bullet lines for numeric data.
+        slide = prs.slides.add_slide(chart_layout)
+        slide.shapes.title.text = title
+        chart_data = CategoryChartData()
+        chart_data.categories = categories
+        chart_data.add_series("Score", values)
+        graphic_frame = slide.shapes.add_chart(
+            XL_CHART_TYPE.COLUMN_CLUSTERED,
+            Inches(0.5), Inches(1.5), Inches(9), Inches(5),
+            chart_data,
+        )
+        graphic_frame.chart.has_legend = False
+        return slide
 
     # 1. Title
     title_slide = prs.slides.add_slide(title_layout)
@@ -124,23 +147,20 @@ def build_pptx() -> bytes:
     add_bullet_slide("Pain Points", pain_lines)
 
     # 5. Operational Analysis
-    kpi_lines = []
-    for row in kpi or []:
-        oee = _format_number(row.get("oee"), ".1%")
-        mtbf = _format_number(row.get("mtbf_hours"), ".1f")
-        mttr = _format_number(row.get("mttr_hours"), ".1f")
-        kpi_lines.append(f"{row.get('machine')}: OEE {oee}, MTBF {mtbf}h, MTTR {mttr}h")
-    add_bullet_slide("Operational Analysis", kpi_lines)
+    if kpi:
+        categories = [row.get("machine") or "?" for row in kpi]
+        oee_values = [round((row.get("oee") or 0) * 100, 1) for row in kpi]
+        add_chart_slide("Operational Analysis — OEE by Machine (%)", categories, oee_values)
+    else:
+        add_bullet_slide("Operational Analysis", None)
 
     # 6. Digital Maturity
-    maturity_lines = []
     if maturity:
-        maturity_lines.append(f"Overall: {maturity.get('overall')} / 5")
-        for category in MATURITY_CATEGORIES:
-            entry = maturity.get(category) or {}
-            label = category.replace("_", " ").title()
-            maturity_lines.append(f"{label}: {entry.get('score')}/5")
-    add_bullet_slide("Digital Maturity", maturity_lines)
+        categories = [c.replace("_", " ").title() for c in MATURITY_CATEGORIES]
+        scores = [(maturity.get(c) or {}).get("score", 0) for c in MATURITY_CATEGORIES]
+        add_chart_slide(f"Digital Maturity — Overall {maturity.get('overall')}/5", categories, scores)
+    else:
+        add_bullet_slide("Digital Maturity", None)
 
     # 7. Roadmap
     roadmap_lines = []
