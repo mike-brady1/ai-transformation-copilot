@@ -1,5 +1,8 @@
 # AI Industry Transformation Consultant
 
+[![CI](https://github.com/mike-brady1/ai-transformation-copilot/actions/workflows/ci.yml/badge.svg)](https://github.com/mike-brady1/ai-transformation-copilot/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 An AI-powered digital transformation copilot for strategy consultants — analyzes client documents and operational data, then generates the deliverables a consulting engagement actually produces: SWOT, digital maturity score, technology roadmap, sustainability estimate, and an exportable executive report and slide deck.
 
 > Portfolio project inspired by Capgemini Invent's Intelligent Industry practice. Built module by module — see [`docs/progress.md`](docs/progress.md) for the full engineering journal: every architecture decision, every bug found, and why, in the order it actually happened.
