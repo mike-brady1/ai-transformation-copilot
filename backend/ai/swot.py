@@ -63,3 +63,13 @@ def format_swot_as_text(swot: dict) -> str:
         for entry in swot.get(category, []):
             lines.append(f"- {entry.get('item')}: {entry.get('explanation')}")
     return "\n".join(lines)
+
+
+def format_weaknesses_as_text(swot: dict) -> str:
+    """Just the Weaknesses quadrant, as plain text — the Technology
+    Recommendation Engine maps problems to fixes, so it only needs the
+    problems, not the full SWOT."""
+    return "\n".join(
+        f"- {entry.get('item')}: {entry.get('explanation')}"
+        for entry in swot.get("weaknesses", [])
+    )

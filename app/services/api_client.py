@@ -65,6 +65,12 @@ def generate_digital_maturity(workspace_id: int) -> dict:
     return resp.json()
 
 
+def generate_technology_recommendations(workspace_id: int) -> dict:
+    resp = requests.post(f"{API_BASE_URL}/workspaces/{workspace_id}/technology-recommendations")
+    resp.raise_for_status()
+    return resp.json()
+
+
 def send_chat_message(workspace_id: int, messages: list[dict]) -> dict:
     resp = requests.post(
         f"{API_BASE_URL}/workspaces/{workspace_id}/chat", json={"messages": messages}
