@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from backend.api.routes.chat import router as chat_router
 from backend.api.routes.documents import router as documents_router
 from backend.api.routes.kpi import router as kpi_router
+from backend.api.routes.roadmap import router as roadmap_router
 from backend.api.routes.swot import router as swot_router
 from backend.api.routes.workspaces import router as workspaces_router
 from backend.database import Base, engine
@@ -15,6 +16,7 @@ app.include_router(documents_router)
 app.include_router(chat_router)
 app.include_router(kpi_router)
 app.include_router(swot_router)
+app.include_router(roadmap_router)
 
 
 @app.get("/health")

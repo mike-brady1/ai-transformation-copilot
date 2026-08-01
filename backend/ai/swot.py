@@ -51,3 +51,15 @@ def generate_swot(client, context: str) -> dict:
             return block.input
 
     return EMPTY_SWOT
+
+
+def format_swot_as_text(swot: dict) -> str:
+    """Turns a SWOT result back into plain text — used as the input to
+    the next step in the pipeline (Roadmap generation), which reasons
+    over the distilled findings rather than the raw documents again."""
+    lines = []
+    for category in ["strengths", "weaknesses", "opportunities", "threats"]:
+        lines.append(f"{category.upper()}:")
+        for entry in swot.get(category, []):
+            lines.append(f"- {entry.get('item')}: {entry.get('explanation')}")
+    return "\n".join(lines)
