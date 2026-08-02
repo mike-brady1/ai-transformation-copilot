@@ -106,3 +106,44 @@ def test_search_self_heals_when_chroma_data_is_lost(client, workspace_id):
     results = resp.json()
     assert len(results) >= 1
     assert "machine failures" in results[0]["text"].lower()
+
+
+def test_delete_document_removes_it_from_list_and_search(client, workspace_id):
+    file_content = b"Machine failures happen almost every week on line 3."
+    upload_resp = client.post(
+        f"/workspaces/{workspace_id}/documents",
+        files={"file": ("notes.txt", io.BytesIO(file_content), "text/plain")},
+    )
+    document_id = upload_resp.json()["id"]
+
+    resp = client.delete(f"/workspaces/{workspace_id}/documents/{document_id}")
+    assert resp.status_code == 204
+
+    list_resp = client.get(f"/workspaces/{workspace_id}/documents")
+    assert list_resp.json() == []
+
+    # The chunks should be gone too, not just the DB row — search should
+    # find nothing left to match, rather than self-healing a document
+    # that was deliberately deleted.
+    search_resp = client.get(
+        f"/workspaces/{workspace_id}/documents/search",
+        params={"q": "machine failures"},
+    )
+    assert search_resp.json() == []
+
+
+def test_delete_document_rejects_wrong_workspace(client, workspace_id):
+    file_content = b"Some notes."
+    upload_resp = client.post(
+        f"/workspaces/{workspace_id}/documents",
+        files={"file": ("notes.txt", io.BytesIO(file_content), "text/plain")},
+    )
+    document_id = upload_resp.json()["id"]
+
+    resp = client.delete(f"/workspaces/999/documents/{document_id}")
+    assert resp.status_code == 404
+
+
+def test_delete_rejects_unknown_document(client, workspace_id):
+    resp = client.delete(f"/workspaces/{workspace_id}/documents/999")
+    assert resp.status_code == 404

@@ -58,6 +58,28 @@ def list_documents(workspace_id: int, db: Session = Depends(get_db)):
     return db.query(Document).filter(Document.workspace_id == workspace_id).all()
 
 
+@router.delete("/{document_id}", status_code=204)
+def delete_document(
+    workspace_id: int,
+    document_id: int,
+    db: Session = Depends(get_db),
+    chroma_client=Depends(get_chroma_client),
+):
+    document = db.get(Document, document_id)
+    if document is None or document.workspace_id != workspace_id:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    # Delete the Chroma chunks first, then the DB row — if the chunks are
+    # already missing (e.g. never got re-indexed), Chroma's delete on a
+    # nonexistent match is just a no-op, not an error, so order here
+    # doesn't risk leaving an orphaned half-deleted state either way.
+    collection = get_collection(chroma_client, workspace_id)
+    collection.delete(where={"document_id": document_id})
+
+    db.delete(document)
+    db.commit()
+
+
 @router.post("/{document_id}/analyze", response_model=list[PainPoint])
 def analyze_document(
     workspace_id: int,

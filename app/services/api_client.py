@@ -46,6 +46,11 @@ def list_documents(workspace_id: int) -> list[dict]:
     return resp.json()
 
 
+def delete_document(workspace_id: int, document_id: int) -> None:
+    resp = requests.delete(f"{API_BASE_URL}/workspaces/{workspace_id}/documents/{document_id}")
+    resp.raise_for_status()
+
+
 def analyze_document(workspace_id: int, document_id: int) -> list[dict]:
     resp = requests.post(
         f"{API_BASE_URL}/workspaces/{workspace_id}/documents/{document_id}/analyze"
