@@ -8,7 +8,7 @@ from backend.models.document import Document
 from backend.models.workspace import Workspace
 from backend.rag.chunking import chunk_text
 from backend.rag.loaders import load_text
-from backend.rag.vector_store import get_chroma_client, get_collection
+from backend.rag.vector_store import get_chroma_client, get_collection, reindex_workspace_documents
 from backend.schemas.document import DocumentOut
 from backend.schemas.interview import PainPoint
 
@@ -33,7 +33,9 @@ async def upload_document(
     # Insert into the relational DB first so we get a real document id —
     # that id is what makes the chunk ids in Chroma unique and traceable
     # back to this exact upload.
-    db_document = Document(workspace_id=workspace_id, filename=file.filename, chunk_count=len(chunks))
+    db_document = Document(
+        workspace_id=workspace_id, filename=file.filename, chunk_count=len(chunks), content=text
+    )
     db.add(db_document)
     db.commit()
     db.refresh(db_document)
@@ -68,6 +70,8 @@ def analyze_document(
     if document is None or document.workspace_id != workspace_id:
         raise HTTPException(status_code=404, detail="Document not found")
 
+    reindex_workspace_documents(chroma_client, db, workspace_id)
+
     # .get() with a metadata filter — different from .query(): this is an
     # exact lookup ("give me every chunk from this document"), not a
     # similarity search. Order isn't guaranteed, so we sort by the
@@ -100,8 +104,10 @@ def search_documents(
     workspace_id: int,
     q: str,
     n_results: int = 3,
+    db: Session = Depends(get_db),
     chroma_client=Depends(get_chroma_client),
 ):
+    reindex_workspace_documents(chroma_client, db, workspace_id)
     collection = get_collection(chroma_client, workspace_id)
     results = collection.query(query_texts=[q], n_results=n_results)
     return [

@@ -82,3 +82,27 @@ def test_search_finds_semantically_related_chunk(client, workspace_id):
     results = resp.json()
     assert len(results) >= 1
     assert "machine failures" in results[0]["text"].lower()
+
+
+def test_search_self_heals_when_chroma_data_is_lost(client, workspace_id):
+    """Regression test for a real production incident: Chroma's storage
+    lived on a host with an ephemeral disk that got wiped by a redeploy,
+    while the Document row survived in Postgres. Simulated here by
+    deleting the Chroma collection directly after a normal upload,
+    leaving the DB row untouched — exactly that state."""
+    file_content = b"Machine failures happen almost every week on line 3."
+    client.post(
+        f"/workspaces/{workspace_id}/documents",
+        files={"file": ("notes.txt", io.BytesIO(file_content), "text/plain")},
+    )
+
+    fresh_chroma_client().delete_collection(name=f"workspace_{workspace_id}_docs")
+
+    resp = client.get(
+        f"/workspaces/{workspace_id}/documents/search",
+        params={"q": "is our equipment reliable?"},
+    )
+    assert resp.status_code == 200
+    results = resp.json()
+    assert len(results) >= 1
+    assert "machine failures" in results[0]["text"].lower()

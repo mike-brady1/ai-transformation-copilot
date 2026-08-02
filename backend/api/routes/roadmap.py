@@ -23,7 +23,7 @@ def generate_roadmap_for_workspace(
     if workspace is None:
         raise HTTPException(status_code=404, detail="Workspace not found")
 
-    context = get_full_workspace_context(chroma_client, workspace_id)
+    context = get_full_workspace_context(chroma_client, db, workspace_id)
     if context is None:
         raise HTTPException(status_code=400, detail="No documents uploaded for this workspace yet")
 

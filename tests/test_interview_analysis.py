@@ -135,3 +135,24 @@ def test_analyze_fails_cleanly_when_chunks_are_missing(client, workspace_id, tes
     resp = client.post(f"/workspaces/{workspace_id}/documents/{document_id}/analyze")
     assert resp.status_code == 404
     assert "re-uploaded" in resp.json()["detail"]
+
+
+def test_analyze_self_heals_when_chroma_data_is_lost(client, workspace_id):
+    """The actual fix, not just the guard: when a document's stored
+    `content` is intact (populated at upload time) but Chroma's chunks
+    are gone — the exact production incident — analysis should recover
+    automatically instead of requiring a manual re-upload."""
+    file_content = b"Machine failures happen almost every week on line 3."
+    upload_resp = client.post(
+        f"/workspaces/{workspace_id}/documents",
+        files={"file": ("notes.txt", io.BytesIO(file_content), "text/plain")},
+    )
+    document_id = upload_resp.json()["id"]
+
+    fresh_chroma_client().delete_collection(name=f"workspace_{workspace_id}_docs")
+
+    resp = client.post(f"/workspaces/{workspace_id}/documents/{document_id}/analyze")
+    assert resp.status_code == 200
+    findings = resp.json()
+    assert len(findings) == 1
+    assert findings[0]["pain_point"] == "High machine downtime"

@@ -5,6 +5,8 @@
 
 An AI-powered digital transformation copilot for strategy consultants — analyzes client documents and operational data, then generates the deliverables a consulting engagement actually produces: SWOT, digital maturity score, technology roadmap, sustainability estimate, and an exportable executive report and slide deck.
 
+**Live**: [ai-transformation-copilot.streamlit.app](https://ai-transformation-copilot.streamlit.app/)
+
 > Portfolio project inspired by Capgemini Invent's Intelligent Industry practice. Built module by module — see [`docs/progress.md`](docs/progress.md) for the full engineering journal: every architecture decision, every bug found, and why, in the order it actually happened.
 
 ## Status
@@ -79,7 +81,15 @@ cp .env.example .env
 
 Edit `.env` and set `ANTHROPIC_API_KEY` (get one at [console.anthropic.com](https://console.anthropic.com)). This is a pay-as-you-go key, separate from any Claude.ai subscription.
 
-### 3. Run it
+### 3. Set up the database
+
+```bash
+alembic upgrade head
+```
+
+Schema is managed by [Alembic](alembic/) migrations, not created automatically on startup — this creates a local `workspaces.db` (SQLite) at the current schema version. Point `DATABASE_URL` at a Postgres connection string instead for production; no code changes needed either way, that's what the ORM is for.
+
+### 4. Run it
 
 ```bash
 # Terminal 1 — backend
@@ -94,7 +104,7 @@ Frontend: http://localhost:8501
 
 A sample KPI CSV is included at [`datasets/sample_kpi.csv`](datasets/sample_kpi.csv) for testing the KPI Dashboard and Sustainability Analyzer without needing real operational data.
 
-### 4. Run the tests
+### 5. Run the tests
 
 ```bash
 pytest
@@ -114,10 +124,11 @@ ai-transformation-copilot/
 │   ├── ai/                 # Claude prompts, tool schemas, one file per module
 │   ├── api/routes/         # one FastAPI router per module
 │   ├── kpi/                # OEE/MTBF/MTTR calculations (pandas, no LLM)
-│   ├── rag/                # chunking, document loaders, ChromaDB access
+│   ├── rag/                # chunking, document loaders, ChromaDB access, self-healing re-index
 │   ├── models/              # SQLAlchemy ORM models
 │   ├── schemas/              # Pydantic request/response schemas
 │   └── database.py
+├── alembic/                # schema migrations — the source of truth for the DB schema
 ├── datasets/               # sample data for manual testing
 ├── docs/progress.md        # the engineering journal — every decision and bug, in order
 ├── tests/                  # pytest, one file per module, all Claude calls mocked
@@ -127,7 +138,7 @@ ai-transformation-copilot/
 
 ## Tech Stack
 
-- **Backend**: Python, FastAPI, SQLAlchemy (SQLite by default, Postgres-ready via `DATABASE_URL`)
+- **Backend**: Python, FastAPI, SQLAlchemy (SQLite by default, Postgres-ready via `DATABASE_URL`), Alembic for schema migrations
 - **Frontend**: Streamlit
 - **AI**: Anthropic Claude (`claude-sonnet-4-5`), tool use for structured output, ChromaDB for vector search, `sentence-transformers` for local embeddings
 - **Data**: pandas
@@ -140,6 +151,8 @@ ai-transformation-copilot/
 - **Structured output isn't a guarantee.** Claude's `tool_choice` forces a tool call, but not that every field arrives under its exact schema name — found in practice when Claude silently emitted `expected_ROI` instead of the schema's `expected_roi` (a strong prior toward capitalizing "ROI" as an acronym). Fixed by avoiding acronym-shaped field names *and* making every non-critical field `Optional` with a safe default, so a future mismatch degrades gracefully instead of 500ing.
 - **Shared in-memory test doubles can leak state.** `chromadb.EphemeralClient()` instances in the same process share their underlying store — confirmed with a two-line repro before trusting it as the cause of a cross-test-file bug — fixed by resetting the shared store once per test, not once per request.
 - **Test with real content, not two-line placeholders.** Two separate PDF-export crashes (a Unicode/Latin-1 font limitation, and a cursor-position bug in `fpdf2`'s `multi_cell`) only appeared with genuinely long, real Claude-generated prose — a short synthetic test string didn't trigger either.
+- **A persistent database next to an ephemeral disk is a real failure mode, not a hypothetical.** ChromaDB's storage lived on Render's free-tier disk, which resets on redeploy, while Postgres (workspace/document metadata) doesn't — a document could exist "on paper" with no searchable content, and it happened in production, not just in theory. Fixed with a self-healing re-index (`reindex_workspace_documents`): the raw text is now also stored in Postgres, and if a workspace's Chroma collection is ever found empty, it's transparently rebuilt from that before the request continues — verified against a real disk (not just the in-memory test client) by stopping the server, deleting `chroma_db` entirely, and restarting it.
+- **Adopting a migration tool mid-project, on an already-deployed database, needs to not break that database.** The baseline Alembic migration checks what tables/columns already exist before creating them, so the exact same migration is a no-op against the live production schema and a full `CREATE TABLE` against a fresh one — no separate manual `alembic stamp` step needed, confirmed by testing both scenarios before trusting it.
 
 ## Skills Demonstrated
 
@@ -147,6 +160,14 @@ ai-transformation-copilot/
 **AI Engineering**: RAG, vector databases, prompt engineering, structured output via tool use, chained multi-step LLM pipelines, grounding/anti-hallucination design, when *not* to use an LLM.
 **Software Engineering**: FastAPI, REST API design, SQLAlchemy, Pydantic, dependency injection for testability, pytest, CI/CD, Streamlit, defensive handling of unreliable external (LLM) responses.
 
-## Deployment (not yet deployed)
+## Deployment
 
-Designed for a free-tier deployment: [Streamlit Community Cloud](https://streamlit.io/cloud) for the frontend, [Render](https://render.com) for the FastAPI backend, [Neon](https://neon.tech) for a hosted Postgres (swap `DATABASE_URL`, no code changes needed — that's the point of using an ORM). Both platforms deploy directly from this GitHub repo.
+Live, on the free tier of all three: [Streamlit Community Cloud](https://streamlit.io/cloud) for the frontend, [Render](https://render.com) for the FastAPI backend, [Neon](https://neon.tech) for hosted Postgres. Both platforms deploy directly from this GitHub repo on every push to `main`.
+
+Render's start command runs the migration before the server on every deploy, so schema changes apply automatically:
+
+```
+alembic upgrade head && uvicorn backend.api.main:app --host 0.0.0.0 --port $PORT
+```
+
+**Known limitation**: Render's free tier has no persistent disk, so ChromaDB's storage resets on every redeploy and on cold start after ~15 minutes idle. Document metadata (Postgres) and raw text always survive; the self-healing re-index described above rebuilds the searchable embeddings automatically on the next request that needs them — there's a brief extra delay on that one request, not a manual re-upload.

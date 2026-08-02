@@ -44,7 +44,7 @@ async def generate_sustainability_report(
     # Documents are optional here (unlike SWOT/Roadmap/Maturity) — the
     # energy math is meaningful on its own from the CSV alone; document
     # context just enriches the waste/transportation assessment if present.
-    document_context = get_full_workspace_context(chroma_client, workspace_id)
+    document_context = get_full_workspace_context(chroma_client, db, workspace_id)
     if document_context is None:
         document_context = "No supporting documents uploaded for this workspace."
 

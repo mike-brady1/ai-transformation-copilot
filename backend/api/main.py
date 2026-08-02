@@ -10,9 +10,12 @@ from backend.api.routes.sustainability import router as sustainability_router
 from backend.api.routes.swot import router as swot_router
 from backend.api.routes.technology import router as technology_router
 from backend.api.routes.workspaces import router as workspaces_router
-from backend.database import Base, engine
 
-Base.metadata.create_all(engine)
+# Schema is now owned by Alembic migrations (see alembic/), not created
+# here — run `alembic upgrade head` before starting the app. This file
+# used to call Base.metadata.create_all(engine) on every startup, which
+# only ever creates missing tables and can't express an actual schema
+# change like adding a column to an existing table.
 
 app = FastAPI(title="AI Transformation Copilot")
 app.include_router(workspaces_router)
